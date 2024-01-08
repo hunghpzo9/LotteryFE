@@ -2,13 +2,9 @@ import "./App.css";
 import {
   Breadcrumb,
   Layout,
-  Menu,
-  Image,
   Spin,
   Button,
   Row,
-  Col,
-  InputNumber,
   Modal,
   notification,
   Form,
@@ -27,9 +23,7 @@ function App() {
 
   const [manager, setManager] = useState("");
   const [result, setResult] = useState("0");
-  const [winner, setWinner] = useState(
-    "0x0000000000000000000000000000000000000000"
-  );
+  const [winner, setWinner] = useState([]);
   const [players, setPlayers] = useState([]);
   const [balance, setBalance] = useState(""); // Note: balance is not a number - it's an object (wrapped in a library called BignumberJS)
   const [value, setValue] = useState(0);
@@ -41,7 +35,7 @@ function App() {
   const [isSentRequest, setIsSentRequest] = useState(false);
   const [currentPlayer, setCurrentPlayer] = useState([]);
   const [previousWinner, setPreviousWinner] = useState([]);
-  const [previousRoundBalance, setPreviousRoundBalance] = useState(0);
+  const [previousRoundBalance, setPreviousRoundBalance] = useState("");
 
 
   useEffect(() => {
@@ -59,23 +53,23 @@ function App() {
       const manager = await lottery.methods.manager().call();
 
       try {
-        const currentPlayer = await lottery.methods.getAllCurrentPlayer().call();;
+        const currentPlayer = await lottery.methods.getAllCurrentPlayer().call();
         setCurrentPlayer(currentPlayer);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
 
       try {
-        const previousWinner = await lottery.methods.getAllPreviousWinner().call();;
+        const previousWinner = await lottery.methods.getAllPreviousWinner().call();
         setPreviousWinner(previousWinner);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
-      const balance = await web3.eth.getBalance(lottery.options.address);
+      // const balance = await web3.eth.getBalance(lottery.options.address);
+      const balance= await lottery.methods.roundBalance().call();
       const previousRoundBalance= await lottery.methods.previousRoundBalance().call();
 
       setResult(result);
-      setWinner(winner);
       setManager(manager);
       setBalance(balance);
       setPreviousRoundBalance(previousRoundBalance)
@@ -165,6 +159,12 @@ function App() {
       await lottery.methods.pickWinner().send({
         from: accounts[0],
       });
+      try {
+        const winner = await lottery.methods.getAllPreviousWinner().call();
+        setWinner(winner);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
       setIsLoading(false);
       setIsModalOpen(true);
       // notification.open({
@@ -221,9 +221,15 @@ function App() {
           </Button>,
         ]}
       >
-        <p>{
-          
-          }</p>
+         {winner.length === 0 ? (
+                <p>No current player now.</p>
+              ) : (
+                <ul>
+                  {winner.map((address, index) => (
+                    <li key={index}>{address}</li>
+                  ))}
+                </ul>
+              )}
       </Modal>
       <Layout className="layout">
         <Header>
@@ -324,7 +330,7 @@ function App() {
             <div style={{ flex: 1 }}>
               <h2>Previous Round</h2>
                 <ul>
-                  {previousRoundBalance}
+                {web3.utils.fromWei(previousRoundBalance, "ether")} ETH
                 </ul>
               
             </div>
